@@ -78,22 +78,33 @@ def show_people():
 
     return jsonify({'People': people_list})
 
+
 @app.route("/people", methods=['POST'])
 def add_people():
     data = request.get_json()
     name = data.get("name")
     age = data.get("age")
 
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO people (name, age) VALUES (%s, %s) RETURNING id, name, age",
-        (name, age)
-    )
-    new_dados_people = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
+    if not name or name.strip() == "":
+        return jsonify({
+            "Error": "Name is required"
+        }), 400
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO people (name, age) VALUES (%s, %s) RETURNING id, name, age",
+            (name, age)
+        )
+        new_dados_people = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({
+            "Error": str(e)
+        }), 500
 
     return jsonify({
         "Message": "Person added",
@@ -178,14 +189,23 @@ def add_professor():
     data = request.get_json()
     name = data.get("name")
 
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("INSERT INTO professor(name) VALUES (%s) RETURNING id, name",(name,))
+    if not name or name.strip() == "":
+        return jsonify({
+            "Error": "Name is required"
+        }), 400
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO professor(name) VALUES (%s) RETURNING id, name",(name,))
 
-    new_professor = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
+        new_professor = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({
+            "Error": str(e)
+        }), 500
 
     return jsonify({
         "Message": "Professor added",
@@ -262,6 +282,11 @@ def add_discipline():
     name = data.get("discipline_name")
     professor_id = data.get("professor_id")
 
+    if not name or name.strip() == "":
+        return jsonify({ "Error": "Discipline name is required" }), 400
+    if not professor_id or professor_id == "":
+        return jsonify({ "Error": "Professor_id is required" }), 400
+
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("INSERT INTO discipline(name,professor_id) VALUES ( %s, %s) RETURNING id,name,professor_id",(name, professor_id))
@@ -269,18 +294,16 @@ def add_discipline():
     conn.commit()
     cur.close()
     conn.close()
-    if new_discipline:
-        return jsonify({
-            "Message": "Discipline added",
-            "Discipline": {
-                "discipline_id":new_discipline[0],
-                "discipline_name":new_discipline[1],
-                "professor_id":new_discipline[2]
+    return jsonify({
+        "Message": "Discipline added",
+        "Discipline": {
+            "discipline_id": new_discipline[0],
+            "discipline_name": new_discipline[1],
+            "professor_id": new_discipline[2]
 
-            }
-        })
-    else:
-        return jsonify({ "Error": "Discipline not found" }), 404
+        }
+    })
+
 
 @app.route("/discipline/<int:id>", methods = ['PUT'])
 def update_discipline(id):
